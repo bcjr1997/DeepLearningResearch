@@ -3,6 +3,7 @@ import tensorflow as tf
 import matplotlib.pyplot as plt
 import numpy as np
 import cv2
+import glob
 from math import sqrt
 
 def split_data(data, proportion):
