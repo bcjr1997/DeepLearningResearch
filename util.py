@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import cv2
 from math import sqrt
+
 def split_data(data, proportion):
     """
     Split a numpy array into two parts of `proportion` and `1 - proportion`
@@ -82,7 +83,6 @@ def load_data_kfold(images,labels,kfold, unique_labels):
 
 	return train_images, train_labels, test_images, test_labels, val_images, val_labels
 
-
 def load_data(path): 
 	#Load all the images from the folder and shuffle it
 	labels = []
@@ -103,15 +103,8 @@ def load_data(path):
 	unique_labels = list(unique_labels)
 	labels = one_hot_encoding(labels,len(unique_labels))
 	labels = labels.astype(float)
-	train_images, test_images = split_data(images, 0.9)
-	train_labels, test_labels = split_data(labels, 0.9)
-	train_images, val_images = split_data(train_images, 0.9)
-	train_labels, val_labels = split_data(train_labels, 0.9)
-
-	train_images = np.reshape(train_images, [-1, 224, 224, 3])
-	test_images = np.reshape(test_images, [-1, 224, 224, 3])
-	val_images = np.reshape(val_images, [-1, 224, 224, 3])
-	return train_images, train_labels, test_images, test_labels, val_images, val_labels, unique_labels
+	
+	return images, labels, unique_labels
 
 
 def confusion_matrix_op(y, output, num_classes):
