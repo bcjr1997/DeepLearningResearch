@@ -3,28 +3,6 @@ import tensorflow as tf
 import matplotlib.pyplot as plt
 import numpy as np
 
-def initiate_basic_model(x):
-    #Basic Convolutional Neural Network
-    with tf.name_scope('linear_model') as scope:
-        hidden_1 = tf.layers.conv2d(x, 32, 5, padding='same', activation=tf.nn.relu,
-                    kernel_regularizer = tf.contrib.layers.l2_regularizer(scale=0.01),
-                    bias_regularizer=tf.contrib.layers.l2_regularizer(scale=0.01),
-                    name='hidden_layer_1')
-        dropout_1 = tf.layers.dropout(hidden_1, rate = 0.1, training=True, name='dropout_layer_1')
-        pool_1 = tf.layers.max_pooling2d(dropout_1, 2, 2, padding='same')
-        hidden_2 = tf.layers.conv2d(pool_1, 64, 5, padding='same', activation=tf.nn.relu,
-                    kernel_regularizer = tf.contrib.layers.l2_regularizer(scale=0.01),
-                    bias_regularizer=tf.contrib.layers.l2_regularizer(scale=0.01),
-                    name='hidden_layer_2')
-        dropout_2 = tf.layers.dropout(hidden_2, rate = 0.1, training=True, name='dropout_layer_2')
-        pool_2 = tf.layers.max_pooling2d(dropout_2, 2, 2, padding='same')
-        #dense layer output
-        flat = tf.reshape(pool_2, [-1, 16*16*1024])
-        output = tf.layers.dense(flat, 3, name = 'output')
-        print(f"Output : {output}")
-    tf.identity(output, name='output')
-    return scope, output
-
 def initiate_vgg_model(x, num_classes):
     #VGG Architecture
     with tf.name_scope('vgg_arch_model') as scope:
