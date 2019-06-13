@@ -22,9 +22,7 @@ def split_data(data, proportion):
     return data[:split_idx], data[split_idx:]
 
 def load_images(image):
-    img = cv2.imread(image)
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    img = img.astype(np.float32)
+    img = open(image, 'rb').read()
     return img
 
 #Methods from Tensorflow's example
@@ -35,20 +33,21 @@ def _bytes_feature(value):
     return tf.train.Feature(bytes_list=tf.train.BytesList(value=[value]))
 
 def make_train_TFRecords(train_imgs, train_labels):
-    file_name = "train_data_tfrecords"
-    writer = tf.python_io.TFRecordWriter(file_name)
+    file_name = "train_data.tfrecords"
+    options = tf.python_io.TFRecordOptions(tf.python_io.TFRecordCompressionType.GZIP)
+    writer = tf.python_io.TFRecordWriter(file_name, options=options)
     
     for i in range(len(train_imgs)):
         
-        if not i % 10000:
-            print("Data : {} / {}".format(i , len(train_imgs)))
+        if not i % 1000:
+            print("Data (Training) : {} / {}".format(i , len(train_imgs)))
 
         #Load the image
         curr_img = load_images(train_imgs[i])
         curr_label = train_labels[i]
         #Create a feature 
-        feature = {'train/label': _float64_feature(curr_label),
-                   'train/image': _bytes_feature(tf.compat.as_bytes(curr_img.tostring()))}
+        feature = {'train/label': _bytes_feature(tf.compat.as_bytes(curr_label.tostring())),
+                   'train/image': _bytes_feature(tf.compat.as_bytes(curr_img))}
 
         protocol_buff = tf.train.Example(features=tf.train.Features(feature= feature))
 
@@ -57,21 +56,21 @@ def make_train_TFRecords(train_imgs, train_labels):
     writer.close()
 
 def make_test_TFRecords(test_imgs, test_labels):
-    file_name = "test_data_tfrecords"
-    writer = tf.python_io.TFRecordWriter(file_name)
+    file_name = "test_data.tfrecords"
+    options = tf.python_io.TFRecordOptions(tf.python_io.TFRecordCompressionType.GZIP)
+    writer = tf.python_io.TFRecordWriter(file_name, options=options)
     
     for i in range(len(test_imgs)):
         
-        if not i % 10000:
-            print("Data : {} / {}".format(i , len(test_imgs)))
+        if not i % 1000:
+            print("Data (Testing) : {} / {}".format(i , len(test_imgs)))
 
         #Load the image
         curr_img = load_images(test_imgs[i])
         curr_label = test_labels[i]
-        print(curr_label)
         #Create a feature 
-        feature = {'train/label': _float64_feature(curr_label),
-                   'train/image': _bytes_feature(tf.compat.as_bytes(curr_img.tostring()))}
+        feature = {'test/label': _bytes_feature(tf.compat.as_bytes(curr_label.tostring())),
+                   'test/image': _bytes_feature(tf.compat.as_bytes(cv2.imencode('.jpg', curr_img).tostring()))}
 
         protocol_buff = tf.train.Example(features=tf.train.Features(feature= feature))
 
@@ -80,21 +79,22 @@ def make_test_TFRecords(test_imgs, test_labels):
     writer.close()
 
 def make_valid_TFRecords(valid_imgs, valid_labels):
-    file_name = "valid_data_tfrecords"
-    writer = tf.python_io.TFRecordWriter(file_name)
+    file_name = "valid_data.tfrecords"
+    options = tf.python_io.TFRecordOptions(tf.python_io.TFRecordCompressionType.GZIP)
+    writer = tf.python_io.TFRecordWriter(file_name, options=options)
     
     for i in range(len(valid_imgs)):
         
-        if not i % 10000:
-            print("Data : {} / {}".format(i , len(valid_imgs)))
+        if not i % 1000:
+            print("Data (Validation) : {} / {}".format(i , len(valid_imgs)))
 
         #Load the image
         curr_img = load_images(valid_imgs[i])
         curr_label = valid_labels[i]
 
         #Create a feature 
-        feature = {'train/label': _float64_feature(curr_label),
-                   'train/image': _bytes_feature(tf.compat.as_bytes(curr_img.tostring()))}
+        feature = {'valid/label': _bytes_feature(tf.compat.as_bytes(curr_label.tostring())),
+                   'valid/image': _bytes_feature(tf.compat.as_bytes(cv2.imencode('.jpg', curr_img).tostring()))}
 
         protocol_buff = tf.train.Example(features=tf.train.Features(feature= feature))
 
@@ -111,7 +111,6 @@ def main(cli_args):
     labels = [os.path.basename(os.path.dirname(path)) for path in images]
     encoder = OneHotEncoder(handle_unknown='ignore')
     labels = encoder.fit_transform(list(zip(images, labels))).toarray()
-    print(labels)
 
     #Shuffle the data
     data = list(zip(images, labels))
