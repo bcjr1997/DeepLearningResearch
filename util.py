@@ -6,6 +6,44 @@ import cv2
 import glob
 from math import sqrt
 
+def normalize_data(image, label):
+	image = tf.cast(image, tf.float32) / 255
+	return image, label
+
+def test_tfrecord_decoder(serialized):
+	IMAGE_SIZE = 224
+	IMAGE_PIXEL = IMAGE_SIZE * IMAGE_SIZE
+
+	features = tf.parse_single_example(serialized=serialized, features={'test/image': tf.FixedLenFeature([], tf.string),
+													   					'test/label': tf.FixedLenFeature([], tf.string)})
+	image = tf.decode_raw(features['test/image'], tf.float32)
+	label = tf.cast(features['test/label'], tf.int64)
+	image.set_shape(IMAGE_PIXEL)
+
+	return image, label
+
+def valid_tfrecord_decoder(serialized):
+	IMAGE_SIZE = 224
+	IMAGE_PIXEL = IMAGE_SIZE * IMAGE_SIZE
+
+	features = tf.parse_single_example(serialized=serialized, features={'valid/image': tf.FixedLenFeature([], tf.string),
+													   					'valid/label': tf.FixedLenFeature([], tf.string)})
+	image = tf.decode_raw(features['valid/image'], tf.float32)
+	label = tf.cast(features['valid/label'], tf.int64)
+	image.set_shape(IMAGE_PIXEL)
+
+	return image, label
+
+def train_tfrecord_decoder(serialized):
+	IMAGE_SIZE = 224
+	IMAGE_PIXEL = IMAGE_SIZE * IMAGE_SIZE
+
+	features = tf.parse_single_example(serialized=serialized, features={'train/image': tf.FixedLenFeature([], tf.string),
+													   					'train/label': tf.FixedLenFeature([], tf.string)})
+	image = tf.decode_raw(features['train/image'], tf.int8)
+	image.set_shape(IMAGE_PIXEL)
+	return image, features['train/label']
+
 def split_data(data, proportion):
     """
     Split a numpy array into two parts of `proportion` and `1 - proportion`
