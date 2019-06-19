@@ -63,14 +63,14 @@ def initiate_vgg_model(x, num_classes):
         #Batch Normalization
         batch_norm_layer_1 = tf.layers.batch_normalization(fc_layer_1, training=True)
         #Dropout
-        dropout_layer_1 = tf.layers.dropout(batch_norm_layer_1, 0.2)
+        dropout_layer_1 = tf.layers.dropout(batch_norm_layer_1, 0.5)
 
         fc_layer_2 = tf.layers.dense(dropout_layer_1,4096,activation=tf.nn.relu, name='fc_layer_2')
 
         #Batch Normalization
         batch_norm_layer_2 = tf.layers.batch_normalization(fc_layer_2, training=True)
         #Dropout
-        dropout_layer_2 = tf.layers.dropout(batch_norm_layer_2, 0.2)
+        dropout_layer_2 = tf.layers.dropout(batch_norm_layer_2, 0.5)
 
         #num_output is not yet defined
         #no activation function on the output?
