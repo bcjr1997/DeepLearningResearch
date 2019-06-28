@@ -41,11 +41,13 @@ def main(cli_args):
     WEIGHT_DECAY = 0.0005
 
     print("Current Setup:-")
-    print("Learning Rate: {}, Epochs: {}, Batch Size: {}, Confidence Interval Z-Score {}, Number of classes: {}, Weight Decay: {}".format(LEARNING_RATE, EPOCHS, BATCH_SIZE, Z_SCORE, NUM_CLASSES, WEIGHT_DECAY))
+    print("Starting Learning Rate: {}, Epochs: {}, Batch Size: {}, Confidence Interval Z-Score {}, Number of classes: {}, Starting Weight Decay: {}".format(LEARNING_RATE, EPOCHS, BATCH_SIZE, Z_SCORE, NUM_CLASSES, WEIGHT_DECAY))
 
     #Placeholders
     x = tf.placeholder(tf.float32, [None, 224, 224, 3], name='input_placeholder')
     y = tf.placeholder(tf.float32, [None, NUM_CLASSES], name='labels')
+    learning_rate = tf.placeholder(tf.float32, shape=[], name='learning_rate')
+    weight_decay = tf.placeholder(tf.float32, shape=[], name="weight_decay")
 
     #Train Dataset
     dataset_len = 515190
@@ -79,7 +81,7 @@ def main(cli_args):
     #Model
     _, outputLayer = initiate_vgg_model(x, NUM_CLASSES)
 
-    optimizer = tf.contrib.opt.AdamWOptimizer(weight_decay=WEIGHT_DECAY, learning_rate=LEARNING_RATE, name="AdamWeightDecay")
+    optimizer = tf.contrib.opt.AdamWOptimizer(weight_decay=weight_decay, learning_rate=learning_rate, name="AdamWeightDecay")
     cross_entropy = util.cross_entropy_op(y, outputLayer)
     global_step_tensor = util.global_step_tensor('global_step_tensor')
     train_op = util.train_op(cross_entropy, global_step_tensor, optimizer)
@@ -129,7 +131,7 @@ def main(cli_args):
                     print("Current Training Iteration : {}/{}".format(i, int(train_dataset_len/BATCH_SIZE)))
                     train_image_data = sess.run(train_el)
                     train_label = util.one_hot_encoding(train_image_data[2],NUM_CLASSES)
-                    train_acc, train_conf_mtx = util.training(BATCH_SIZE, x, y, train_image_data[0]/255, train_label, sess, train_op, conf_matrix, NUM_CLASSES)
+                    train_acc, train_conf_mtx = util.training(BATCH_SIZE, x, y, learning_rate, weight_decay, train_image_data[0]/255, train_label, sess, train_op, conf_matrix, NUM_CLASSES, LEARNING_RATE, WEIGHT_DECAY)
                     train_value1, train_value2 = util.confidence_interval(train_acc, Z_SCORE, train_image_data[0].shape[0])
                     print("Training Confidence Interval: [{} , {}]".format(train_value2, train_value1))
                     output_data = {'epoch': epoch, 'iteration':i, 'train_accuracy': train_acc, 'train_conf_matrix':train_conf_mtx,
@@ -141,17 +143,18 @@ def main(cli_args):
                         train_highest_acc = train_acc
                         print("Highest Training Accuracy Reached: {}".format(train_highest_acc))
                         #For every epoch, we will save the model
-                        saver.save(sess, os.path.join("./dl_research/", "dl_research"))
+                        saver.save(sess, os.path.join("./dl_research/", "model.ckpt"))
+                        print("Latest Model is saving")
             
             train_df.to_csv(r"./train_results.csv", header=True, index=False, encoding='utf-8')      
 
             valid_highest_acc = 0
-            for i in range(int((dataset_len.shape[0] * 0.1)/BATCH_SIZE)):
-                print("Current Validation Iteration : {}/{}".format(i, int((dataset_len.shape[0] * 0.1)/BATCH_SIZE)))
+            for i in range(int((dataset_len * 0.1)/BATCH_SIZE)):
+                print("Current Validation Iteration : {}/{}".format(i, int((dataset_len * 0.1)/BATCH_SIZE)))
                 valid_image_data = sess.run(valid_el)
                 valid_label = util.one_hot_encoding(valid_image_data[2], NUM_CLASSES)
                 valid_acc, valid_conf_mtx, valid_avg_valid_ce = util.validation(BATCH_SIZE, x, y, valid_image_data[0]/255, valid_label, sess, cross_entropy, conf_matrix, NUM_CLASSES)
-                valid_value1, valid_value2 = util.confidence_interval(valid_acc, Z_SCORE, valid_image_data[0].shape[0])
+                valid_value1, valid_value2 = util.confidence_interval(valid_acc, Z_SCORE, valid_image_data[0])
                 print("Validation Confidence Interval: [{} , {}]".format(valid_value2, valid_value1))
                 output_data = {'iteration': i, 'valid_accuracy': valid_acc, 'valid_conf_matrix': valid_conf_mtx,
                                'positive_confidence_interval': valid_value1, 'negative_confidence_interval': valid_value2,
@@ -165,8 +168,8 @@ def main(cli_args):
             valid_df.to_csv(r"./valid_results.csv", header=True, index=False, encoding='utf-8')     
 
             test_highest_acc = 0
-            for i in range(int((dataset_len.shape[0] * 0.1)/BATCH_SIZE)):
-                print("Current Testing Iteration : {}/{}".format(i, int((dataset_len.shape[0] * 0.1)/BATCH_SIZE)))
+            for i in range(int((dataset_len * 0.1)/BATCH_SIZE)):
+                print("Current Testing Iteration : {}/{}".format(i, int((dataset_len* 0.1)/BATCH_SIZE)))
                 test_image_data = sess.run(test_el)
                 test_label = util.one_hot_encoding(test_image_data[2], NUM_CLASSES)
                 test_acc, test_ce, test_conf_mtx = util.test(BATCH_SIZE, x, y, test_image_data[0]/255, test_label, sess, cross_entropy, conf_matrix, NUM_CLASSES)
