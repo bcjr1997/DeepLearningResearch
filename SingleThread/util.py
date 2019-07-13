@@ -154,10 +154,13 @@ def confusion_matrix_op(y, output, num_classes):
 	return conf_mtx
 
 def cross_entropy_op(y_placeholder, output):
-	return tf.nn.softmax_cross_entropy_with_logits(labels=y_placeholder, logits=output)
+	cross_ent = tf.nn.softmax_cross_entropy_with_logits(labels=y_placeholder, logits=output, name="cross_entropy")
+	tf.summary.histogram("cross_entropy", cross_ent)
+	return cross_ent
 
 def train_op(cross_entropy_op, global_step_tensor, optimizer):
-	return optimizer.minimize(cross_entropy_op, global_step=global_step_tensor)
+	training_operation = optimizer.minimize(cross_entropy_op, global_step=global_step_tensor, name="training_op")
+	return training_operation
 
 #Declaring global step tensor
 def global_step_tensor(name):
@@ -168,7 +171,7 @@ def global_step_tensor(name):
 	initializer=tf.zeros_initializer)
 	return global_step_tensor
 
-def training(batch_size, x, y,  learning_rate, weight_decay, train_images, train_labels, session, train_op, confusion_matrix_op, num_classes, LEARNING_RATE, WEIGHT_DECAY):
+def training(batch_size, x, y,  learning_rate, weight_decay, train_images, train_labels, session, train_op, confusion_matrix_op, num_classes, LEARNING_RATE, WEIGHT_DECAY, merged_summary):
 	with np.printoptions(threshold=np.inf):
 		train_conf_mxs =[]
 		avg_accuracy = 0
@@ -177,7 +180,7 @@ def training(batch_size, x, y,  learning_rate, weight_decay, train_images, train
 			batch_xs = train_images[i * batch_size:(i + 1) * batch_size, :]
 			batch_ys = train_labels[i * batch_size:(i + 1) * batch_size, :]
 			
-			_,conf_matrix = session.run([train_op, confusion_matrix_op], feed_dict = {x: batch_xs, y: batch_ys, learning_rate: LEARNING_RATE, weight_decay: WEIGHT_DECAY})
+			summary, _, conf_matrix = session.run([merged_summary, train_op, confusion_matrix_op], feed_dict = {x: batch_xs, y: batch_ys, learning_rate: LEARNING_RATE, weight_decay: WEIGHT_DECAY})
 			train_conf_mxs.append(conf_matrix)
 		avg_conf_mxs= sum(train_conf_mxs)
 		print(type(avg_conf_mxs))
@@ -188,7 +191,8 @@ def training(batch_size, x, y,  learning_rate, weight_decay, train_images, train
 		#This prints the values across each class
 		print(str(sum(train_conf_mxs)))
 		acc = avg_accuracy/train_images.shape[0]
-	return acc, avg_conf_mxs
+		tf.summary.histogram("Accuracy", acc)
+	return acc, avg_conf_mxs, summary
 
 def validation(batch_size, x, y, valid_images, valid_labels, session, cross_entropy_op, confusion_matrix_op, num_classes):
 	with np.printoptions(threshold=np.inf):
@@ -219,7 +223,7 @@ def validation(batch_size, x, y, valid_images, valid_labels, session, cross_entr
 		matrix = sum(conf_mxs)
 	return acc, matrix, avg_valid_ce
 
-def test(batch_size, x , y, test_images, test_labels, session, cross_entropy_op, confusion_matrix_op, num_classes):
+def test(batch_size, x , y,  learning_rate, weight_decay, test_images, test_labels, session, cross_entropy_op, confusion_matrix_op, num_classes, LEARNING_RATE, WEIGHT_DECAY):
 	with np.printoptions(threshold=np.inf):
 		# report mean test loss
 		ce_vals = []

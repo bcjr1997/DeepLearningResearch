@@ -29,10 +29,10 @@ def read_and_decode_tfrecords(tfrecord_file):
     filename = curr_example['filename']
     return [image, image_shape, label, filename]
 
-#Argsparse
+#Argsparse 
 def main(cli_args):
     #Constants
-    DATASET_PATH = os.path.join("../dataset/")
+    DATASET_PATH = os.path.join("../Datasets/serengeti_dataset_tfrecords/")
     LEARNING_RATE = 0.01
     EPOCHS = 55
     BATCH_SIZE = 128
@@ -40,11 +40,13 @@ def main(cli_args):
     Z_SCORE = 1.96
     WEIGHT_DECAY = 0.0005
 
+
     print("Current Setup:-")
     print("Starting Learning Rate: {}, Epochs: {}, Batch Size: {}, Confidence Interval Z-Score {}, Number of classes: {}, Starting Weight Decay: {}".format(LEARNING_RATE, EPOCHS, BATCH_SIZE, Z_SCORE, NUM_CLASSES, WEIGHT_DECAY))
 
     #Placeholders
     x = tf.placeholder(tf.float32, [None, 224, 224, 3], name='input_placeholder')
+    print(x)
     y = tf.placeholder(tf.float32, [None, NUM_CLASSES], name='labels')
     learning_rate = tf.placeholder(tf.float32, shape=[], name='learning_rate')
     weight_decay = tf.placeholder(tf.float32, shape=[], name="weight_decay")
@@ -80,9 +82,11 @@ def main(cli_args):
 
     #Model
     _, outputLayer = initiate_vgg_model(x, NUM_CLASSES)
+    print(outputLayer)
 
     optimizer = tf.contrib.opt.AdamWOptimizer(weight_decay=weight_decay, learning_rate=learning_rate, name="AdamWeightDecay")
     cross_entropy = util.cross_entropy_op(y, outputLayer)
+    print(cross_entropy)
     global_step_tensor = util.global_step_tensor('global_step_tensor')
     train_op = util.train_op(cross_entropy, global_step_tensor, optimizer)
     conf_matrix = util.confusion_matrix_op(y, outputLayer, NUM_CLASSES)
@@ -105,6 +109,7 @@ def main(cli_args):
 
     with tf.Session() as sess:
         with np.printoptions(threshold=np.inf):
+            
             sess.run(tf.global_variables_initializer())
             for epoch in range(EPOCHS):
 
@@ -168,8 +173,8 @@ def main(cli_args):
             valid_df.to_csv(r"./valid_results.csv", header=True, index=False, encoding='utf-8')     
 
             test_highest_acc = 0
-            for i in range(int((dataset_len* 0.1)/BATCH_SIZE)):
-                print("Current Testing Iteration : {}/{}".format(i, int((dataset_len * 0.1)/BATCH_SIZE)))
+            for i in range(int((dataset_len * 0.1)/BATCH_SIZE)):
+                print("Current Testing Iteration : {}/{}".format(i, int((dataset_len* 0.1)/BATCH_SIZE)))
                 test_image_data = sess.run(test_el)
                 test_label = util.one_hot_encoding(test_image_data[2], NUM_CLASSES)
                 test_acc, test_ce, test_conf_mtx = util.test(BATCH_SIZE, x, y, test_image_data[0]/255, test_label, sess, cross_entropy, conf_matrix, NUM_CLASSES)
