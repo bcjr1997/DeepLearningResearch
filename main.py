@@ -32,7 +32,7 @@ def read_and_decode_tfrecords(tfrecord_file):
 #Argsparse
 def main(cli_args):
     #Constants
-    DATASET_PATH = os.path.join("../Datasets/serengeti_dataset_tfrecords/")
+    DATASET_PATH = os.path.join("../dataset/")
     LEARNING_RATE = 0.01
     EPOCHS = 55
     BATCH_SIZE = 128
@@ -168,8 +168,8 @@ def main(cli_args):
             valid_df.to_csv(r"./valid_results.csv", header=True, index=False, encoding='utf-8')     
 
             test_highest_acc = 0
-            for i in range(int((dataset_len * 0.1)/BATCH_SIZE)):
-                print("Current Testing Iteration : {}/{}".format(i, int((dataset_len* 0.1)/BATCH_SIZE)))
+            for i in range(int((dataset_len* 0.1)/BATCH_SIZE)):
+                print("Current Testing Iteration : {}/{}".format(i, int((dataset_len * 0.1)/BATCH_SIZE)))
                 test_image_data = sess.run(test_el)
                 test_label = util.one_hot_encoding(test_image_data[2], NUM_CLASSES)
                 test_acc, test_ce, test_conf_mtx = util.test(BATCH_SIZE, x, y, test_image_data[0]/255, test_label, sess, cross_entropy, conf_matrix, NUM_CLASSES)
