@@ -6,7 +6,7 @@ import numpy as np
 
 def initiate_vgg_model(features, labels, filename, num_classes, weight_decay, learning_rate, handle="training", reuse_model=None):
     #VGG Architecture
-    with tf.variable_scope('vgg_arch_model', reuse=reuse_model) as scope:
+    with tf.variable_scope("vgg_arch_model", reuse=reuse_model) as scope:
         #Declare feature input for the model
         x_placeholder = tf.reshape(features/255, [-1, 224, 224, 3])
 
@@ -83,6 +83,9 @@ def initiate_vgg_model(features, labels, filename, num_classes, weight_decay, le
         optimizer = tf.contrib.opt.MomentumWOptimizer(weight_decay=weight_decay, learning_rate=learning_rate, momentum=0.9,  name="MomentumWeightDecay")
         global_step_tensor = util.global_step_tensor('global_step_tensor')
 
+        with tf.name_scope("images"):
+            tf.summary.image(str(handle+"_image"), features[0])
+
         with tf.name_scope("cost"):
             cross_entropy = util.cross_entropy_op(label_placeholder, logits, "cross_entropy")
             train_op = util.train_op(cross_entropy, global_step_tensor, optimizer)
@@ -91,7 +94,7 @@ def initiate_vgg_model(features, labels, filename, num_classes, weight_decay, le
         with tf.name_scope("confusion_matrix"):
             conf_matrix_op = util.confusion_matrix_op(label_placeholder, logits, num_classes)
             conf_mtx = tf.reshape(tf.cast(conf_matrix_op, tf.float32), [1, num_classes, num_classes, 1])
-            tf.summary.image('confusion_image', conf_mtx)
+            tf.summary.image(str(handle+"_confusion_matrix"), conf_mtx)
 
         with tf.name_scope("accuracy"):
             accuracy = tf.equal(tf.argmax(logits, 1), tf.argmax(label_placeholder,1))
