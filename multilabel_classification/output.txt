@@ -1,0 +1,5 @@
+1000
+Current Setup:-
+Starting Learning Rate: 0.02, Epochs: 10, Batch Size: 32, Confidence Interval Z-Score 1.96, Number of classes: 17, Starting Weight Decay: 0.0005
+Current Epoch: 0
+Current Training Iteration : 0/10

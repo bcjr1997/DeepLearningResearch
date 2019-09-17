@@ -6,8 +6,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 import cv2
 import glob
-from math import sqrt
+from math import sqrt, floor
 import json	
+from sklearn.preprocessing import OneHotEncoder
+import skimage.io as io
+from PIL import Image
 
 def _bytes_feature(value):
   return tf.train.Feature(bytes_list=tf.train.BytesList(value=[value]))
@@ -71,17 +74,16 @@ def convert_labels_to_numeric(labels):
     if i in label_dict:
       labels[index] = label_dict[i]
 
-  with open('small_dataset_label.txt', 'w') as f:
+  with open('labels_code.txt', 'w') as f:
     f.write(json.dumps(label_dict))
 
   return labels
 
 def main(cli_args):
     #Get the data from the dataset
-    DATASET_PATH = os.path.join("../../Datasets/224_small_dataset")
-    images = np.array(glob.glob(os.path.join(DATASET_PATH, '*', '*.JPG')))
-    print(images)
-    labels = np.array([os.path.basename(os.path.dirname(path)) for path in images])
+    DATASET_PATH = os.path.join("../Datasets/224_small_dataset")
+    images = np.array(glob.glob(os.path.join(DATASET_PATH, '*.JPG')))
+    labels = np.array(["zorilla"])
     labels = convert_labels_to_numeric(labels)
     
     permutation = np.random.permutation(images.shape[0])
@@ -94,9 +96,22 @@ def main(cli_args):
     train_label, test_label = split_data(labels, 0.8)
     test_label, valid_label = split_data(test_label, 0.5)
 
-    convert_to_tfrecords(train_imgs, train_label, "small_train_dataset.tfrecord")
-    convert_to_tfrecords(test_imgs, test_label, "small_test_dataset.tfrecord")
-    convert_to_tfrecords(valid_imgs, valid_label, "small_valid_dataset.tfrecord")
+    #Shard the Training Dataset
+    NUM_SHARDS = 25
+    SHARD_SIZE = train_imgs.shape[0] / NUM_SHARDS
+    for i in range(NUM_SHARDS):
+      if i == 24:
+        train_subset_imgs = train_imgs[floor(i * SHARD_SIZE) : train_imgs.shape[0]]
+        train_subset_label = train_label[floor(i * SHARD_SIZE) : train_imgs.shape[0]]
+        convert_to_tfrecords(train_subset_imgs, train_subset_label, "./datasets/train_dataset_%s.tfrecord" %i)
+      else:
+        train_subset_imgs = train_imgs[floor(i * SHARD_SIZE) : floor((i + 1) * SHARD_SIZE) ]
+        train_subset_label = train_label[floor(i * SHARD_SIZE) : floor((i + 1) * SHARD_SIZE) ]
+        convert_to_tfrecords(train_subset_imgs, train_subset_label, "./datasets/train_dataset_%s.tfrecord" %i)
+      
+
+    convert_to_tfrecords(test_imgs, test_label, "test_dataset.tfrecord")
+    convert_to_tfrecords(valid_imgs, valid_label, "valid_dataset.tfrecord")
 
 if __name__ == "__main__":
     main(sys.argv[1:])

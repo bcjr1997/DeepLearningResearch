@@ -1,12 +1,15 @@
 import os
 import tensorflow as tf
+import util
 import matplotlib.pyplot as plt
 import numpy as np
 
-def initiate_vgg_model(x, num_classes):
+def initiate_vgg_model(features, labels, filename, num_classes, weight_decay, learning_rate, reuse, tower_grads, gpu_num, handle="training"):
     #VGG Architecture
-    with tf.name_scope('vgg_arch_model') as scope:
-        conv_1 = tf.layers.conv2d(x, 64, 3, padding='same', activation=tf.nn.relu,
+    with tf.variable_scope('VGGArch', reuse=reuse) as scope:
+        #Declare feature input for the model
+        x_placeholder = tf.reshape(features/255, [-1, 224, 224, 3])
+        conv_1 = tf.layers.conv2d(x_placeholder, 64, 3, padding='same', activation=tf.nn.relu,
                                     kernel_regularizer = tf.contrib.layers.l2_regularizer(scale=0.01),
                                     bias_regularizer=tf.contrib.layers.l2_regularizer(scale=0.01),
                                     name='conv_1')
@@ -73,9 +76,31 @@ def initiate_vgg_model(x, num_classes):
         dropout_layer_2 = tf.layers.dropout(batch_norm_layer_2, 0.5)
 
         #num_output is not yet defined
-        #no activation function on the output?
-        output = tf.layers.dense(dropout_layer_2, num_classes, name='output')
+        logits = tf.layers.dense(dropout_layer_2, num_classes, name='output')
 
-    tf.identity(output, name='output')
-    return scope, output
+    tf.identity(logits, name='output')
+
+    #Declare Loss and Optimizer functions
+    label_placeholder = tf.one_hot(labels, num_classes)
+    optimizer = tf.contrib.opt.MomentumWOptimizer(weight_decay=weight_decay, learning_rate=learning_rate, momentum=0.9,  name="MomentumWeightDecay")
+    #global_step_tensor = util.global_step_tensor('global_step_tensor')
+    with tf.name_scope("cost"):
+        cross_entropy = util.cross_entropy_op(label_placeholder, logits, "cross_entropy")
+        gradients = optimizer.compute_gradients(cross_entropy)
+        tf.summary.scalar(str(handle+"_loss"), cross_entropy)
+
+    with tf.name_scope("confusion_matrix"):
+        conf_matrix_op = util.confusion_matrix_op(label_placeholder, logits, num_classes)
+        conf_mtx = tf.reshape(tf.cast(conf_matrix_op, tf.float32), [1, num_classes, num_classes, 1])
+        tf.summary.image('confusion_image', conf_mtx)
+
+    if gpu_num == 0:
+        with tf.name_scope("accuracy"):
+            accuracy = tf.equal(tf.argmax(logits, 1), tf.argmax(label_placeholder,1))
+            accuracy = tf.reduce_mean(tf.cast(accuracy, tf.float32))
+            tf.summary.scalar(str(handle+"_accuracy"), accuracy)
+
+    tower_grads.append(gradients)
+    reuse_vars = True
+    return scope, optimizer, tower_grads, cross_entropy, conf_matrix_op, accuracy, reuse_vars
 

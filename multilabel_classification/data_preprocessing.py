@@ -1,0 +1,150 @@
+import os
+import random
+import sys
+import tensorflow as tf
+import matplotlib.pyplot as plt
+import numpy as np
+import cv2
+import glob
+from math import sqrt, floor
+import json	
+from sklearn.preprocessing import OneHotEncoder
+import skimage.io as io
+import pandas as pd
+from PIL import Image
+
+def _bytes_feature(value):
+  return tf.train.Feature(bytes_list=tf.train.BytesList(value=[value]))
+
+def _int64_feature(value):
+  return tf.train.Feature(int64_list=tf.train.Int64List(value=[value]))
+
+def load_image(image_path):
+  with tf.gfile.FastGFile(image_path, 'rb') as reader:
+    curr_img = reader.read()
+  return curr_img
+
+def convert_to_tfrecords(images, labels, filenames, file_name):
+  writer = tf.python_io.TFRecordWriter(file_name)
+
+  for index in range(len(images)):
+
+    if not index % 1000:
+      print("Data Converted for {}: {}/{}".format(file_name, index, len(images)))
+
+    img = images[index]
+    label = labels[index]
+    filename = filenames[index]
+    height = 224
+    width = 224
+    
+    dataset_features = {
+      'image_raw': _bytes_feature(img),
+      'filename': _bytes_feature(filename.encode('utf-8')),
+      'label': _bytes_feature(label),
+      'height': _int64_feature(height),
+      'width': _int64_feature(width),
+      'channels': _int64_feature(3) 
+    }
+
+    example = tf.train.Example(features=tf.train.Features(feature=dataset_features))
+
+    writer.write(example.SerializeToString())
+  
+  writer.close()
+
+def split_data(data, proportion):
+    """
+    Split a numpy array into two parts of `proportion` and `1 - proportion`
+    
+    Args:
+        - data: numpy array, to be split along the first axis
+        - proportion: a float less than 1
+    """
+    size = data.shape[0]
+    split_idx = int(proportion * size)
+    return data[:split_idx], data[split_idx:]
+
+def convert_labels_to_numeric(labels):
+  unique_label = list(set(labels))
+  label_dict = {}
+
+  for index, i in enumerate(unique_label):
+    label_dict[i] = index
+
+  for index, i in enumerate(labels):
+    if i in label_dict:
+      labels[index] = label_dict[i]
+
+  with open('labels_code.txt', 'w') as f:
+    f.write(json.dumps(label_dict))
+
+  return labels
+
+def get_data():
+    data_csv = pd.read_csv(os.path.join(".", "train_v2.csv"))
+    image_path = os.path.join(".", "train-jpg")
+    image_data = []
+    label_data = []
+    unique_labels = set()
+
+    for img in data_csv["image_name"]:
+        image = cv2.imread(os.path.join(image_path, img + ".jpg"))/255
+        image_data.append(image)
+
+    for tags in data_csv["tags"]:
+        label_data.append(tags.split())
+        for i in tags.split():
+            unique_labels.add(i)
+
+    for index, labels in enumerate(label_data):
+        label_data[index] = convert_labels_to_array(labels, sorted(unique_labels))
+
+    return image_data, label_data, sorted(unique_labels), data_csv["image_name"]
+
+def convert_labels_to_array(labels, unique_labels):
+    new_arr = np.zeros(len(unique_labels), dtype=np.float32)
+    for index, label in enumerate(unique_labels):
+        for tag in labels:
+            if tag == label:
+                new_arr[index] = 1.0
+    return new_arr
+
+def main(cli_args):
+    DATASET_PATH = os.path.join("./train-jpg")
+    #Get the data from the dataset
+    image_data, label_data, unique_label, filenames = get_data() 
+    images = np.array(image_data)
+    labels = np.array(label_data)
+
+    permutation = np.random.permutation(images.shape[0])
+    images = images[permutation]
+    labels = labels[permutation]
+
+
+    train_imgs, test_imgs = split_data(images, 0.8)
+    test_imgs, valid_imgs = split_data(test_imgs, 0.5)
+
+    train_label, test_label = split_data(labels, 0.8)
+    test_label, valid_label = split_data(test_label, 0.5)
+
+    #Shard the Training Dataset
+    NUM_SHARDS = 25
+    SHARD_SIZE = train_imgs.shape[0] / NUM_SHARDS
+    convert_to_tfrecords(train_imgs, train_label, filenames, "train_dataset.tfrecord")
+    #for i in range(NUM_SHARDS):
+    #  if i == 24:
+    #    train_subset_imgs = train_imgs[floor(i * SHARD_SIZE) : train_imgs.shape[0]]
+    #    train_subset_label = train_label[floor(i * SHARD_SIZE) : train_imgs.shape[0]]
+    #    convert_to_tfrecords(train_subset_imgs, train_subset_label, "./datasets/train_dataset_%s.tfrecord" %i)
+    #  else:
+    #    train_subset_imgs = train_imgs[floor(i * SHARD_SIZE) : floor((i + 1) * SHARD_SIZE) ]
+    #    train_subset_label = train_label[floor(i * SHARD_SIZE) : floor((i + 1) * SHARD_SIZE) ]
+    #    convert_to_tfrecords(train_subset_imgs, train_subset_label, "./datasets/train_dataset_%s.tfrecord" %i)
+      
+
+    convert_to_tfrecords(test_imgs, test_label, filenames, "test_dataset.tfrecord")
+    convert_to_tfrecords(valid_imgs, valid_label, filenames, "valid_dataset.tfrecord")
+
+if __name__ == "__main__":
+    main(sys.argv[1:])
