@@ -70,7 +70,7 @@ def main():
                         #For every epoch, we will save the model
                             saver.save(sess, os.path.join("./short_dl_research_train/", "model.ckpt"))
                             print("Latest Model is saving and Tensorboard Logs are updated")  
-                        train_writer.add_summary(tf.summary.merge_all(), epoch * (floor(int(157252)/32)) + i)
+                        train_writer.add_summary(tf.summary.merge_all().eval(), epoch * (floor(int(157252)/32)) + i)
                         i = i + 1
                 except tf.errors.OutOfRangeError:
                     print("End of the training dataset, proceed to validation")
@@ -89,7 +89,7 @@ def main():
                         if valid_highest_acc <= valid_acc:
                             valid_highest_acc = valid_acc
                             print("Highest Validation Accuracy Reached: {}".format(valid_highest_acc))
-                        valid_writer.add_summary(tf.summary.merge_all(), epoch * (floor(int(19657)/32)) + j)
+                        valid_writer.add_summary(tf.summary.merge_all().eval(), epoch * (floor(int(19657)/32)) + j)
                         j = j + 1
                 except tf.errors.OutOfRangeError:
                     print("End of validation dataset, go to the next epoch")
