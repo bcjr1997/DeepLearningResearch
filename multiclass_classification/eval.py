@@ -38,10 +38,10 @@ def get_parser():
     parser.add_argument('-decay', '--weightDecay',
         help = 'Set the weight decay'
     )
-    return parser
+    main(parser)
 
-def main(args = [ ]):
-    parser = get_parser()
+def main(args_parser):
+    parser = args_parser
     args   = parser.parse_args()
     
     with tf.device('/cpu:0'):
@@ -88,4 +88,4 @@ def main(args = [ ]):
                     writer.add_summary(summary, i)
 
 if __name__ == "__main__":
-    main()
+    get_parser()

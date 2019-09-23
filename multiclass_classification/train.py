@@ -9,9 +9,7 @@ import glob
 import util
 from basic_model import initiate_vgg_model
 from math import floor
-
 import os, os.path as osp, sys
-import argparse
 
 def get_parser():
     parser = argparse.ArgumentParser(
@@ -44,14 +42,13 @@ def get_parser():
     parser.add_argument('-decay', '--weightDecay',
         help = 'Set the weight decay'
     )
-    return parser
+    main(parser)
 
 #Argsparse
-def main(args = [ ]):
-    parser = get_parser()
+def main(args_parser):
+    parser = args_parser
     args   = parser.parse_args()
-    
-    
+
     #tf.reset_default_graph()
     DATASET_PATH = args.datasetPath
     LEARNING_RATE_1 = args.learningRate
@@ -136,4 +133,4 @@ def main(args = [ ]):
                     pass
                         
 if __name__ == "__main__":
-    main()   
+    get_parser()

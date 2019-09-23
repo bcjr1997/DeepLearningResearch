@@ -12,14 +12,14 @@ def get_data():
     unique_labels = set()
 
     for index, img in enumerate(data_csv["image_name"]):
-        if(index < 1000):
+        if(index < 10000):
             image = cv2.imread(os.path.join(image_path, img + ".jpg"))/255
             image_data.append(image)
         else:
             break
 
     for index, tags in enumerate(data_csv["tags"]):
-        if(index < 1000):
+        if(index < 10000):
             label_data.append(tags.split())
             for i in tags.split():
                 unique_labels.add(i)
@@ -35,8 +35,15 @@ def get_data():
     permutation = np.random.permutation(image_data.shape[0])
     image_data = image_data[permutation]
     label_data = label_data[permutation]
-
-    return image_data, label_data, sorted(unique_labels), data_csv["image_name"]
+    
+    #Split Training and Validation data
+    train_image_data = image_data[:8000]
+    train_label_data = image_data[:8000]
+    train_filename = data_csv["image_name"][:8000]
+    valid_image_data = image_data[8000: 10000]
+    valid_label_data = image_data[8000: 10000]
+    valid_filename = data_csv["image_name"][8000: 10000]
+    return train_image_data, train_label_data, train_filename, valid_image_data, valid_label_data, valid_filename, sorted(unique_labels)
 
 def convert_labels_to_array(labels, unique_labels):
     new_arr = np.zeros(len(unique_labels), dtype=np.float32)

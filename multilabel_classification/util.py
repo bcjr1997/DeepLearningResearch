@@ -20,32 +20,34 @@ def assign_to_device(device, ps_device='/cpu:0'):
     return _assign
 
 def train_input_fn(DATASET_PATH, BATCH_SIZE, EPOCHS):
-    train_dataset = tf.data.TFRecordDataset([os.path.join(DATASET_PATH, 'aug_train_dataset.tfrecord')])
-    train_dataset = train_dataset.map(read_and_decode_tfrecords, num_parallel_calls=2)
+    train_dataset = tf.data.TFRecordDataset([os.path.join(DATASET_PATH, 'small_train_dataset.tfrecord')])
+    train_dataset = train_dataset.repeat(EPOCHS)
+    train_dataset = train_dataset.map(read_and_decode_tfrecords, num_parallel_calls=1)
     train_dataset = train_dataset.batch(BATCH_SIZE)
     train_dataset = train_dataset.repeat(EPOCHS)
     train_dataset = train_dataset.prefetch(1)
-    train_iterator = train_dataset.make_one_shot_iterator()
+    train_iterator = train_dataset.make_initializable_iterator()
     train_next_element = train_iterator.get_next()
-    return train_next_element
+    return train_next_element, train_iterator
 
 def valid_input_fn(DATASET_PATH, BATCH_SIZE, EPOCHS):
-    valid_dataset = tf.data.TFRecordDataset([os.path.join(DATASET_PATH, 'aug_valid_dataset.tfrecord')])
-    valid_dataset = valid_dataset.map(read_and_decode_tfrecords, num_parallel_calls=2)
+    valid_dataset = tf.data.TFRecordDataset([os.path.join(DATASET_PATH, 'small_valid_dataset.tfrecord')])
+    valid_dataset = valid_dataset.repeat(EPOCHS)
+    valid_dataset = valid_dataset.map(read_and_decode_tfrecords, num_parallel_calls=1)
     valid_dataset = valid_dataset.batch(BATCH_SIZE)
     valid_dataset = valid_dataset.repeat(EPOCHS)
     valid_dataset = valid_dataset.prefetch(1)
-    valid_iterator = valid_dataset.make_one_shot_iterator()
+    valid_iterator = valid_dataset.make_initializable_iterator()
     valid_next_element = valid_iterator.get_next()
-    return valid_next_element 
+    return valid_next_element, valid_iterator
 
 def test_input_fn(DATASET_PATH, BATCH_SIZE, EPOCHS):
-    test_dataset = tf.data.TFRecordDataset([os.path.join(DATASET_PATH, 'aug_test_dataset.tfrecord')])
-    test_dataset = test_dataset.map(read_and_decode_tfrecords, num_parallel_calls=2)
+    test_dataset = tf.data.TFRecordDataset([os.path.join(DATASET_PATH, 'small_test_dataset.tfrecord')])
+    test_dataset = test_dataset.map(read_and_decode_tfrecords, num_parallel_calls=1)
     test_dataset = test_dataset.batch(BATCH_SIZE)
     test_dataset = test_dataset.repeat(EPOCHS)
     test_dataset = test_dataset.prefetch(1)
-    test_iterator = test_dataset.make_one_shot_iterator()
+    test_iterator = test_dataset.make_initializable_iterator()
     test_next_element = test_iterator.get_next()
     return test_next_element
 
@@ -114,48 +116,26 @@ def global_step_tensor(name):
 	initializer=tf.zeros_initializer)
 	return global_step_tensor
 
-def training(batch_size, NUM_CLASSES, learning_rate, weight_decay, session, train_op, confusion_matrix_op, LEARNING_RATE, WEIGHT_DECAY, cross_entropy_op, merged_summary, accuracy_op):
+def training(batch_size, NUM_CLASSES, learning_rate, weight_decay, session, train_op, confusion_matrix_op, LEARNING_RATE, WEIGHT_DECAY, cross_entropy_op, accuracy_op):
 	with np.printoptions(threshold=np.inf):
-		summary, train_cost , confusion_mtx, train_ce, train_acc= session.run([merged_summary, train_op, confusion_matrix_op, tf.reduce_mean(cross_entropy_op), accuracy_op],
+		train_cost , confusion_mtx, train_ce, train_acc = session.run([train_op, confusion_matrix_op, tf.reduce_mean(cross_entropy_op), accuracy_op],
 															  feed_dict = {learning_rate: LEARNING_RATE, weight_decay: WEIGHT_DECAY})
 		#This prints the values across each class
-	return train_acc, confusion_mtx, train_cost, train_ce, summary
+	return train_acc, confusion_mtx, train_cost, train_ce
 
-def validation(batch_size, NUM_CLASSES, learning_rate, weight_decay, session, confusion_matrix_op, LEARNING_RATE, WEIGHT_DECAY, cross_entropy_op, merged_summary, accuracy_op):
+def validation(batch_size, NUM_CLASSES, learning_rate, weight_decay, session, confusion_matrix_op, LEARNING_RATE, WEIGHT_DECAY, cross_entropy_op, accuracy_op):
 	with np.printoptions(threshold=np.inf):
-		summary, valid_ce, conf_matrix, valid_acc = session.run([merged_summary, cross_entropy_op, confusion_matrix_op, accuracy_op],
+		valid_ce, conf_matrix, valid_acc = session.run([cross_entropy_op, confusion_matrix_op, accuracy_op],
 													  feed_dict = {learning_rate: LEARNING_RATE, weight_decay: WEIGHT_DECAY})
 		#This prints the values across each class
-	return valid_acc, conf_matrix, valid_ce, summary
+	return valid_acc, conf_matrix, valid_ce
 
-def test(batch_size, x , y,  learning_rate, weight_decay, test_images, test_labels, session, cross_entropy_op, confusion_matrix_op, num_classes, LEARNING_RATE, WEIGHT_DECAY):
+def test(batch_size, learning_rate, weight_decay, session, cross_entropy_op, confusion_matrix_op, num_classes, LEARNING_RATE, WEIGHT_DECAY, merged_summary, accuracy_op):
 	with np.printoptions(threshold=np.inf):
-		# report mean test loss
-		ce_vals = []
-		conf_mxs = []
-		for i in range(test_images.shape[0] // batch_size):
-			batch_xs = test_images[i * batch_size:(i + 1) * batch_size, :]
-			batch_ys = test_labels[i * batch_size:(i + 1) * batch_size, :]
-			test_ce, conf_matrix = session.run(
-				[tf.reduce_mean(cross_entropy_op), confusion_matrix_op], {
-					x: batch_xs,
-					y: batch_ys
-				})
-			ce_vals.append(test_ce)
-			conf_mxs.append(conf_matrix)
-		avg_test_ce = sum(ce_vals) / len(ce_vals)
-		avg_accuracy = 0
-		avg_conf_mxs = sum(conf_mxs)
-		for i in range(num_classes):
-			avg_accuracy = avg_accuracy + avg_conf_mxs[i][i]
-		print('TEST CROSS ENTROPY: ' + str(avg_test_ce))
-		print("TEST ACCURACY :" + str(avg_accuracy/test_images.shape[0]))
-		print('TEST CONFUSION MATRIX:')
-		print(str(sum(conf_mxs)))
-		test_acc = avg_accuracy/test_images.shape[0]
-		test_ce = avg_test_ce
-		test_conf_mtx = sum(conf_mxs)
-	return test_acc, test_ce, test_conf_mtx
+		confusion_mtx, test_ce, test_acc = session.run([merged_summary, confusion_matrix_op, tf.reduce_mean(cross_entropy_op), accuracy_op],
+															  feed_dict = {learning_rate: LEARNING_RATE, weight_decay: WEIGHT_DECAY})
+		#This prints the values across each class
+	return confusion_mtx, test_ce, test_acc 
 
 def get_available_gpus():
     local_device_protos = device_lib.list_local_devices()
