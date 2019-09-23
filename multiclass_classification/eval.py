@@ -4,17 +4,55 @@ import util
 import os
 import numpy as np
 from model import initiate_vgg_model
+import os, os.path as osp, sys
+import argparse
 
-def main():
+def get_parser():
+    parser = argparse.ArgumentParser(
+        description = 'Deep learning multiclass classification'
+    )
+    parser.add_argument('-dataset', '--datasetPath',
+        help = 'Path to dataset'
+    )
+
+    parser.add_argument('-rate', '--learningRate',
+        help = 'Set the learning rate'
+    )
+
+    parser.add_argument('-epochs', '--epochs',
+        help = 'Set the epochs'
+    )
+
+    parser.add_argument('-batch-size', '--batchSize',
+        help = 'Set the batch size'
+    )
+
+    parser.add_argument('-classes', '--numClasses',
+        help = 'Set the number of classes'
+    )
+
+    parser.add_argument('-zscore', '--zScore',
+        help = 'Set the Z score'
+    )
+
+    parser.add_argument('-decay', '--weightDecay',
+        help = 'Set the weight decay'
+    )
+    return parser
+
+def main(args = [ ]):
+    parser = get_parser()
+    args   = parser.parse_args()
+    
     with tf.device('/cpu:0'):
         #tf.reset_default_graph()
-        DATASET_PATH = os.path.join("../", "Estimator")
-        LEARNING_RATE_1 = 0.0001
-        EPOCHS = 2
-        BATCH_SIZE = 32
-        NUM_CLASSES = 48 
-        Z_SCORE = 1.96
-        WEIGHT_DECAY_1 = 0.0005
+        DATASET_PATH = args.datasetPath
+        LEARNING_RATE_1 = args.learningRate
+        EPOCHS = args.epochs
+        BATCH_SIZE = args.batchSize
+        NUM_CLASSES = args.numClasses
+        Z_SCORE = args.zScore
+        WEIGHT_DECAY_1 = args.weightDecay
 
         #Placeholders
         learning_rate = tf.placeholder(tf.float32, shape=[], name='learning_rate')
