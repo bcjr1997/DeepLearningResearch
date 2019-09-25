@@ -51,12 +51,12 @@ def main(args_parser):
 
     #tf.reset_default_graph()
     DATASET_PATH = args.datasetPath
-    LEARNING_RATE_1 = args.learningRate
-    EPOCHS = args.epochs
-    BATCH_SIZE = args.batchSize
-    NUM_CLASSES = args.numClasses
-    Z_SCORE = args.zScore
-    WEIGHT_DECAY_1 = args.weightDecay
+    LEARNING_RATE_1 = 0.01#(args.learningRate)
+    EPOCHS = 4 #int(args.epochs)
+    BATCH_SIZE = 32 #int(args.batchSize)
+    NUM_CLASSES = 5 #int(args.numClasses)
+    Z_SCORE = 1.96 #(args.zScore)
+    WEIGHT_DECAY_1 = 0.0005#(args.weightDecay)
 
     print("Current Setup:-")
     print("Starting Learning Rate: {}, Epochs: {}, Batch Size: {}, Confidence Interval Z-Score {}, Number of classes: {}, Starting Weight Decay: {}".format(LEARNING_RATE_1, EPOCHS, BATCH_SIZE, Z_SCORE, NUM_CLASSES, WEIGHT_DECAY_1))
@@ -90,10 +90,11 @@ def main(args_parser):
             sess.run([tf.global_variables_initializer(), tf.local_variables_initializer()])
 
             for epoch in range(EPOCHS):
+                sess.run([train_iterator.initializer, valid_iterator.initializer])
+                print("Train iterator and valid iterator are initialized")
                 print("Current Epoch: {}/{}".format(epoch, EPOCHS))
                 i = 0
                 try:
-                    sess.run(train_iterator.initializer)
                     while True:
                         print("Current Training Iteration : {}/{}".format(i, floor(int(157252)/BATCH_SIZE)))
                         train_acc, _, _, train_ce = util.training(BATCH_SIZE, NUM_CLASSES,learning_rate, weight_decay, sess, train_op, train_conf_matrix_op, LEARNING_RATE_1, WEIGHT_DECAY_1, train_cross_entropy, train_accuracy)
@@ -115,7 +116,6 @@ def main(args_parser):
 
                 j = 0
                 try:
-                    sess.run(valid_iterator.initializer)
                     while True:
                         print("Current Validation Iteration : {}/{}".format(j, floor(int(19657)/BATCH_SIZE)))
                         valid_acc, _, valid_ce = util.validation(BATCH_SIZE, NUM_CLASSES,learning_rate, weight_decay, sess, valid_conf_matrix_op, LEARNING_RATE_1, WEIGHT_DECAY_1, valid_cross_entropy, valid_accuracy)

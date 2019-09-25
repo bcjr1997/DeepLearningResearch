@@ -83,8 +83,8 @@ def initiate_vgg_model(features, labels, filename, num_classes, weight_decay, le
         optimizer = tf.contrib.opt.MomentumWOptimizer(weight_decay=weight_decay, learning_rate=learning_rate, momentum=0.9,  name="MomentumWeightDecay")
         global_step_tensor = util.global_step_tensor('global_step_tensor')
 
-        with tf.name_scope("images"):
-            tf.summary.image(str(handle+"_image"), features[0])
+        #with tf.name_scope("images"):
+        #    tf.summary.image(str(handle+"_image"), features[0])
 
         with tf.name_scope("cost"):
             cross_entropy = util.cross_entropy_op(label_placeholder, logits, "cross_entropy")
